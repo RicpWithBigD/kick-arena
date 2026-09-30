@@ -9,9 +9,9 @@ const Sim=new Function('cl','wrap','L','W','GW','GH','BR',`let M=null,P=[],G=[],
 ${cut('function mkP(','function applySnap')}
 ${cut('/* --- host simulation --- */','/* --- client smoothing')}
 function init(r,tl){M={sc:[0,0],ph:'cd',ct:3,ot:0,gl:0,q:0,kc:0,ks:0,tl,dead:0};P=r.map(mkP);G=[0,1].map(mkG);place()}
-function inp(j,d){if(!P[j]||P[j].bot||!d)return;P[j].i={x:cl(d.x,-1.5,1.5),z:cl(d.z,-1.5,1.5),s:d.s?1:0,sh:d.sh|0,pw:cl(d.pw,0,1),p:d.p|0,t:d.t|0,k:d.k|0,ax:cl(d.ax,-1.5,1.5),az:cl(d.az,-1.5,1.5),fs:d.fs?1:0,m:d.m?1:0,tx:cl(d.tx,-L-3,L+3),tz:cl(d.tz,-W-3,W+3)}}
+function inp(j,d){if(!P[j]||P[j].bot||!d)return;P[j].i={x:cl(d.x,-1.5,1.5),z:cl(d.z,-1.5,1.5),s:d.s?1:0,sh:d.sh|0,pw:cl(d.pw,0,1),p:d.p|0,t:d.t|0,k:d.k|0,ax:cl(d.ax,-1.5,1.5),az:cl(d.az,-1.5,1.5),fs:d.fs?1:0,m:d.m?1:0,tx:cl(d.tx,-L-3,L+3),tz:cl(d.tz,-W-3,W+3),ty:cl(d.ty,0,8),rq:d.rq?1:0}}
 function bot1(j){if(P[j])P[j].bot=1}
-return{init,sim,snap,inp,bot1,ph:()=>M.ph}`);
+return{init,sim,snap,inp,bot1,ph:()=>M.ph,P:()=>P,B:()=>B,M:()=>M,G:()=>G}`);
 /* ---------- Räume ---------- */
 const rooms=new Map(),cs=new Set();let uid=1;
 const gen=()=>{let c;do c=[...Array(6)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');while(rooms.has(c));return c};

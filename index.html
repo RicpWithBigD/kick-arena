@@ -72,7 +72,7 @@ Object.assign(SF,{oh:()=>noise(.9,.35,700,.15),save:()=>{noise(.15,.5,500);SF.oh
 function ambient(){if(amb)return;try{const a=ac(),n=a.sampleRate*3,bf=a.createBuffer(1,n,a.sampleRate),d=bf.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const o=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();o.buffer=bf;o.loop=true;f.type='bandpass';f.frequency.value=650;f.Q.value=.5;g.gain.value=.02;o.connect(f).connect(g).connect(a.destination);o.start();amb=g}catch(e){}}
 function ambSet(){if(amb&&AC)amb.gain.setTargetAtTime((SC=='game'?.05+CE*.3:.02)*VOL,AC.currentTime,.3)}
 /* ---------- Input ---------- */
-const K={},pv={};
+const K={},pv={},KEYS={req:'KeyC'};
 addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;K[e.code]=1;if(e.code=='Escape'&&SC=='game')togMenu();if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault()});
 addEventListener('keyup',e=>K[e.code]=0);
 const cv=$('#c');cv.addEventListener('mousedown',e=>{K['M'+e.button]=1});addEventListener('mouseup',e=>{K['M'+e.button]=0});addEventListener('contextmenu',e=>e.preventDefault());
@@ -81,15 +81,16 @@ const ptype=g=>g&&/054c|dualsense|dualshock|playstation|wireless controller/i.te
 addEventListener('gamepadconnected',e=>{toast('Controller verbunden: '+(ptype(e.gamepad)=='ps'?'PlayStation':'Xbox/XInput'));setP({d:dev()});ctlTxt()});
 addEventListener('gamepaddisconnected',()=>{toast('Controller getrennt – Tastatur/Maus ist aktiv');setP({d:dev()});ctlTxt()});
 const dev=()=>gp()?'🎮':'⌨️';
-function lbl(){const t=ptype(gp());return gp()?(t=='ps'?'Stick Bewegen · R1 Sprint · □ halten Schuss · ✕ Pass · ○ Tackle · △ Trick · L1+□ Effet-Schuss · Options Menü':'Stick Bewegen · RB Sprint · X halten Schuss · A Pass · B Tackle · Y Trick · LB+X Effet-Schuss · Start Menü'):'WASD Bewegen · Shift Sprint · Maus = Zielen · Linksklick/Leertaste halten = Schuss (Halten = Kraft) · E/Rechtsklick Pass · Q Tackle · F Trick · R+Schuss Effet · Esc Menü'}
+function lbl(){const t=ptype(gp());return gp()?(t=='ps'?'Stick Bewegen · R1 Sprint · □ halten Schuss · ✕ Pass · ○ Tackle · △ Trick · L1+□ Effet-Schuss · R2 Pass anfordern · Options Menü':'Stick Bewegen · RB Sprint · X halten Schuss · A Pass · B Tackle · Y Trick · LB+X Effet-Schuss · RT Pass anfordern · Start Menü'):'WASD Bewegen · Shift Sprint · Maus = Zielen · Linksklick/Leertaste halten = Schuss (Halten = Kraft) · E/Rechtsklick Pass · Q Tackle · F Trick · R+Schuss Effet · C Pass anfordern · Esc Menü'}
 function ctlTxt(){$('#ctl').innerHTML=`<b>Steuerung</b> (${gp()?'Controller erkannt':'Tastatur/Maus'})<br>${lbl().replace(/ · /g,'<br>')}<br><small>Rechter Stick: Kamera verschieben · Umbelegung: nicht enthalten</small>`}
 function readIn(dt){
  const g=gp();aimUp(g);let fx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),fy=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0);
  let sp=K.ShiftLeft||K.ShiftRight,sh=K.Space||K.M0,pa=K.KeyE||K.M2,tk=K.KeyQ||K.ControlLeft,tr=K.KeyF||K.M1,fn=K.KeyR;CO={x:0,y:0};
  if(g){const dz=v=>Math.abs(v)<.18?0:v,ax=dz(g.axes[0]),ay=dz(g.axes[1]),b=i=>g.buttons[i]&&g.buttons[i].pressed;if(ax||ay){fx=ax;fy=-ay}CO={x:dz(g.axes[2]),y:-dz(g.axes[3])};sp=sp||b(5);sh=sh||b(2);pa=pa||b(0);tk=tk||b(1);tr=tr||b(3);fn=fn||b(4)||b(6)}
  if(ME<0||!CUR||CUR.ph!='play'){fx=fy=0;sh=pa=tk=tr=0}
+ IN.rq=(ME>=0&&CUR&&CUR.ph=='play'&&(K[KEYS.req]||(g&&g.buttons[7]&&g.buttons[7].pressed)))?1:0;
  const dir=P[ME]&&P[ME].team?-1:1;IN.x=dir*fy;IN.z=dir*fx;IN.s=sp?1:0;
- if(sh)ch=Math.min(1,ch+dt/.85);else if(pv.sh){IN.sh++;IN.pw=Math.max(.2,ch);IN.ax=IN.x;IN.az=IN.z;IN.fs=fn?1:0;IN.m=useM?1:0;IN.tx=AIM.x;IN.tz=AIM.z;ch=0;}pv.sh=sh;
+ if(sh)ch=Math.min(1,ch+dt/.85);else if(pv.sh){IN.sh++;IN.pw=Math.max(.2,ch);IN.ax=IN.x;IN.az=IN.z;IN.fs=fn?1:0;IN.m=useM?1:0;IN.tx=AIM.x;IN.ty=AIM.y;IN.tz=AIM.z;ch=0;}pv.sh=sh;
  if(pa&&!pv.pa)IN.p++;pv.pa=pa;if(tk&&!pv.tk)IN.t++;pv.tk=tk;if(tr&&!pv.tr)IN.k++;pv.tr=tr;$('#ch i').style.width=ch*100+'%'}
 let fi=0,pp={};
 function navPad(){const g=gp();if(!g)return;const b=i=>g.buttons[i]&&g.buttons[i].pressed,e=(k,v)=>{const r=v&&!pp[k];pp[k]=v;return r};
@@ -103,10 +104,14 @@ const scene=new THREE.Scene();scene.background=new THREE.Color(0x0e1a33);scene.f
 const cam=new THREE.PerspectiveCamera(58,1,.1,300);cam.position.set(-15,10,0);
 function rs(){ren.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',rs);rs();
 scene.add(new THREE.HemisphereLight(0xbfd4ff,0x224422,.8));
-let AIM={x:0,z:0},mUse=0,useM=0;const rc=new THREE.Raycaster(),mv=new THREE.Vector2(),gpl=new THREE.Plane(new THREE.Vector3(0,1,0),-.3),hv=new THREE.Vector3(),AM=new THREE.Mesh(new THREE.RingGeometry(.35,.5,24),new THREE.MeshBasicMaterial({color:0xfacc15,transparent:true,opacity:.75,side:2}));AM.rotation.x=-Math.PI/2;AM.visible=false;scene.add(AM);
+let AIM={x:0,y:.3,z:0},mUse=0,useM=0;const rc=new THREE.Raycaster(),mv=new THREE.Vector2(),gpl=new THREE.Plane(new THREE.Vector3(0,1,0),-.3),hv=new THREE.Vector3(),AM=new THREE.Mesh(new THREE.RingGeometry(.35,.5,24),new THREE.MeshBasicMaterial({color:0xfacc15,transparent:true,opacity:.75,side:2}));AM.rotation.x=-Math.PI/2;AM.visible=false;scene.add(AM);
 cv.addEventListener('mousemove',e=>{mv.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);mUse=performance.now()});
+const gpl2=new THREE.Plane(new THREE.Vector3(1,0,0),0),hv2=new THREE.Vector3();
 function aimUp(g){if(g&&(Math.abs(g.axes[0])>.5||Math.abs(g.axes[1])>.5||Math.abs(g.axes[2])>.5))mUse=0;useM=mUse>0&&(!g||performance.now()-mUse<2500);
- if(useM){rc.setFromCamera(mv,cam);if(rc.ray.intersectPlane(gpl,hv)){AIM.x=cl(hv.x,-L-6,L+6);AIM.z=cl(hv.z,-W-4,W+4)}}AM.visible=!!useM&&SC=='game';AM.position.set(AIM.x,.07,AIM.z)}
+ if(useM){rc.setFromCamera(mv,cam);const r=rc.ray,gx=(P[ME]&&P[ME].team?-1:1)*L;gpl2.constant=-gx;const dg=r.distanceToPlane(gpl),dp=r.distanceToPlane(gpl2);let done=0;
+  if(dp!==null&&(dg===null||dp<dg)){r.at(dp,hv2);if(hv2.y>.4&&hv2.y<8&&Math.abs(hv2.z)<W){AIM.x=gx;AIM.y=hv2.y;AIM.z=hv2.z;done=1}}
+  if(!done&&dg!==null){r.at(dg,hv);AIM.x=cl(hv.x,-L-6,L+6);AIM.y=.3;AIM.z=cl(hv.z,-W-4,W+4)}}
+ const v=AIM.y>.6;AM.visible=!!useM&&SC=='game';AM.rotation.set(v?0:-Math.PI/2,v?Math.PI/2:0,0);AM.position.set(AIM.x,v?AIM.y:.07,AIM.z)}
 const sun=new THREE.DirectionalLight(0xffffff,.9);sun.position.set(20,45,15);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-45,right:45,top:32,bottom:-32,far:130});scene.add(sun);
 function pitchTex(){const k=16,c=document.createElement('canvas');c.width=76*k;c.height=46*k;const x=c.getContext('2d'),X=v=>(v+38)*k,Z=v=>(v+23)*k;
  for(let i=0;i<19;i++){x.fillStyle=i%2?'#2e8b3c':'#37a047';x.fillRect(i*4*k,0,4*k,c.height)}
@@ -208,19 +213,31 @@ function stepP(p,dt,inp){let ix=inp.x,iz=inp.z;const m=Math.hypot(ix,iz);if(m>1)
  if((m>.1||p.tk>0||(p.trk>0&&p.tt<3))&&p.stun<=0)p.ry+=wrap(Math.atan2(ix,iz)-p.ry)*Math.min(1,dt*14)}
 function kick(p,shot,pw,i){p.act=shot?3:4;p.actT=.3;const d=Math.hypot(B.x-p.x,B.z-p.z);if(d>1.9||B.y>1.8||p.kcd>0||p.stun>0)return;let a=p.ry,sp,vy,sc=0;
  if(shot){const m0=Math.hypot(i.ax,i.az);let rel=0;if(i.m){a=Math.atan2(i.tx-B.x,i.tz-B.z);rel=wrap(a-p.ry)}else if(m0>.3){rel=cl(wrap(Math.atan2(i.ax,i.az)-p.ry),-1.9,1.9);a=p.ry+rel}sp=11+pw*22+(pw>.85?3:0);vy=pw<.35?.4+pw*2:pw<.85?1.2+pw*5:1.5+pw*3;vy*=cl((L-(p.team?-p.x:p.x))/18,.45,1);if(Math.hypot(p.vx,p.vz)>8)vy+=1.2;if(i.fs&&pw>=.3&&Math.abs(rel)>.1)sc=Math.sign(rel)*(.2+pw*.3)*Math.min(1,Math.abs(rel)/.5)}else{let bd=1e9,bt=null;P.forEach(q=>{if(q!==p&&q.team==p.team){const ex=q.x-p.x,ez=q.z-p.z,an=Math.atan2(ex,ez),dd=Math.hypot(ex,ez);if(Math.abs(wrap(an-p.ry))<.6&&dd<bd){bd=dd;bt=an}}});if(bt!==null)a=bt;sp=bt!==null?cl(bd*1.25+4,9,20):13;vy=.9}
+ if(shot&&i.m&&i.ty>.6){const D=Math.hypot(i.tx-B.x,i.tz-B.z)||1,T=Math.max(.15,D/(sp*.96));vy=cl((i.ty-B.y+12*T*T)/T,1,13)}
  B.vx=Math.sin(a)*sp;B.vz=Math.cos(a)*sp;B.vy=vy;if(shot){B.vx+=p.vx*.3;B.vz+=p.vz*.3}B.sp=sc;p.kcd=.35;M.kc++;M.ks=shot?1:2}
-function bot(p,dt){const mates=P.filter(q=>q.team==p.team),dir=p.team?-1:1,gx=dir*L,dist=q=>Math.hypot(B.x-q.x,B.z-q.z),cn=mates.reduce((a,q)=>dist(q)<dist(a)?q:a),d=dist(p);let tx,tz;
- if(cn===p){if(d<1.2){tx=gx;tz=0}else{tx=B.x+B.vx*.25;tz=B.z+B.vz*.25}}else{tx=B.x-dir*9;tz=p.z*.5+B.z*.3}
- const vx=tx-p.x,vz=tz-p.z,m=Math.hypot(vx,vz)||1,k=Math.min(1,m/1.2)*(cn===p?.92:.8);p.i.x=vx/m*k;p.i.z=vz/m*k;p.i.s=d>5&&cn===p?1:0;p.bt-=dt;
- if(d<1.5&&Math.abs(B.x-gx)<17&&p.bt<=0&&Math.abs(wrap(p.ry-(dir>0?Math.PI/2:-Math.PI/2)))<.8){p.i.sh++;p.i.pw=.6+Math.random()*.4;p.bt=1.3}}
+function segClear(a,b,team,r){for(const o of P){if(o.team==team)continue;const vx=b.x-a.x,vz=b.z-a.z,t=cl(((o.x-a.x)*vx+(o.z-a.z)*vz)/(vx*vx+vz*vz||1),0,1);if(Math.hypot(a.x+vx*t-o.x,a.z+vz*t-o.z)<r)return 0}return 1}
+function bot(p,dt){const mates=P.filter(q=>q.team==p.team),opp=P.filter(q=>q.team!=p.team),dir=p.team?-1:1,gx=dir*L,dist=q=>Math.hypot(B.x-q.x,B.z-q.z),me=P.indexOf(p),own=B.own>=0?P[B.own]:null,
+ cn=mates.reduce((a,q)=>dist(q)<dist(a)?q:a),d=dist(p),has=B.own===me,ours=own&&own.team==p.team;let tx,tz;p.bt-=dt;p.bt2=(p.bt2||0)-dt;
+ if(cn===p){if(d<1.2){tx=gx;tz=0}else{tx=B.x+B.vx*.25;tz=B.z+B.vz*.25}}
+ else if(ours){tx=cl(B.x+dir*7,-L+4,L-4);tz=-(Math.sign(B.z)||1)*7}   /* anbieten: vorne, andere Seite */
+ else{tx=B.x-dir*7;tz=p.z*.5+B.z*.3}   /* Raum hinter dem Ball decken */
+ const vx=tx-p.x,vz=tz-p.z,m=Math.hypot(vx,vz)||1,k=Math.min(1,m/1.2)*(cn===p?.92:.8);p.i.x=vx/m*k;p.i.z=vz/m*k;p.i.s=d>5&&cn===p?1:0;
+ if(has&&p.bt2<=0&&p.stun<=0){let tg=null;const rq=mates.find(q=>q!==p&&!q.bot&&q.i.rq);
+  if(rq){if(segClear(p,rq,p.team,1.5))tg=rq}
+  else if(opp.some(o=>Math.hypot(o.x-p.x,o.z-p.z)<3&&(o.x-p.x)*dir>-.5)&&Math.random()<dt*3)   /* unter Druck: freien Mitspieler suchen */
+   tg=mates.filter(q=>q!==p&&Math.hypot(q.x-p.x,q.z-p.z)>4&&segClear(p,q,p.team,1.4)).sort((a,c)=>Math.abs(gx-a.x)-Math.abs(gx-c.x))[0]||null;
+  if(tg){p.ry=Math.atan2(tg.x-p.x,tg.z-p.z);kick(p,0);p.bt2=1.2}}
+ if(cn===p&&own&&!ours&&d<1.3&&p.tkcd<=0&&p.stun<=0&&Math.random()<dt*2.2)p.i.t++;   /* Zweikampf */
+ if(d<1.5&&Math.abs(B.x-gx)<19&&p.bt<=0&&Math.abs(wrap(p.ry-(dir>0?Math.PI/2:-Math.PI/2)))<.9){   /* Schuss in die Ecke, weg vom Torwart */
+  const kz=G[dir>0?1:0].z;p.i.m=1;p.i.tx=gx;p.i.tz=(kz>0?-1:1)*(1.4+Math.random()*1.7)+(Math.random()-.5)*.6;p.i.ty=Math.random()<.45?.4:1.1+Math.random()*1.2;p.i.sh++;p.i.pw=.55+Math.random()*.4;p.bt=1.4}}
 function gk(g,dt){const sx=g.t?1:-1,gx=sx*(L-1.4),b=B,dist=Math.abs(b.x-sx*L);g.kcd-=dt;
  if(g.hold>0){g.hold-=dt;g.act=4;g.y=Math.max(0,g.y-4*dt);if(g.hold<=0){b.vx=-sx*(10+Math.random()*4);b.vz=(Math.random()-.5)*8;b.vy=3.5;g.kcd=1;g.act=0;M.ks=2;M.kc++}return}
- if(g.act==2||g.act==3){g.tm-=dt;const pr=1-Math.max(0,g.tm)/g.td;if(g.act==2)g.z=cl(g.z+g.vz*dt,-GW-.4,GW+.4);g.y=(g.act==2?.85:1.1)*Math.sin(Math.PI*Math.min(1,pr));if(g.tm<=0){g.act=5;g.tm=.8;g.y=0}}
- else if(g.act==5){g.tm-=dt;if(g.tm<=0){g.act=7;g.tm=.6}}else if(g.act==7){g.tm-=dt;if(g.tm<=0)g.act=0}
+ if(g.act==2||g.act==3){g.tm-=dt;const pr=1-Math.max(0,g.tm)/g.td;if(g.act==2)g.z=cl(g.z+g.vz*dt,-GW-.4,GW+.4);g.y=(g.act==2?.85:1.1)*Math.sin(Math.PI*Math.min(1,pr));if(g.tm<=0){g.act=5;g.tm=.5;g.y=0}}
+ else if(g.act==5){g.tm-=dt;if(g.tm<=0){g.act=7;g.tm=.4}}else if(g.act==7){g.tm-=dt;if(g.tm<=0)g.act=0}
  else{let thr=null;if(b.vx*sx>2.5&&dist<28){const th=(gx-b.x)/b.vx;if(th>0&&th<1.6){const iz=b.z+b.vz*th,iy=b.y+b.vy*th-12*th*th;if(Math.abs(iz)<GW+.8&&iy<GH+.6&&iy>-.3)thr={th,iz,iy:Math.max(0,iy),sp:Math.hypot(b.vx,b.vz)}}}
-  if(!thr){g.rd=0;g.rt=-1;g.tgz=undefined}else if(!g.rd){if(g.rt<0){g.skill=Math.random();g.rt=.14+.16*(1-g.skill)}g.rt-=dt;if(g.rt<=0){g.rd=1;const tz=cl(thr.iz+(1-g.skill)*1.3*(Math.random()<.5?-1:1),-GW,GW),dz=tz-g.z;
+  if(!thr){g.rd=0;g.rt=-1;g.tgz=undefined}else if(!g.rd){if(g.rt<0){g.skill=Math.random();g.rt=(.10+.14*(1-g.skill))*(thr.sp>22?.8:1)}g.rt-=dt;if(g.rt<=0){g.rd=1;const tz=cl(thr.iz+(1-g.skill)*1.3*(Math.random()<.5?-1:1),-GW,GW),dz=tz-g.z;
    if(thr.iy>1.9&&Math.abs(dz)<1.4){g.act=3;g.td=g.tm=.65}else if(Math.abs(dz)>1){g.act=2;g.dz=Math.sign(dz);g.vz=cl(dz/.4,-8.5,8.5);g.td=g.tm=.55}else g.tgz=tz}}
-  if(g.act<2){const idle=cl(b.z*cl(7/Math.max(5,dist),0,1),-2.7,2.7),tz=g.tgz!==undefined?g.tgz:idle,ax=gx-sx*cl((18-dist)/9,0,1)*1.6,dz=cl(tz-g.z,-5.5*dt,5.5*dt);g.z+=dz;g.x+=cl(ax-g.x,-3*dt,3*dt);g.act=Math.abs(dz)>.01?1:0}}
+  if(g.act<2){const idle=cl(b.z*cl(7/Math.max(5,dist),0,1),-2.7,2.7),tz=g.tgz!==undefined?g.tgz:idle,ow=B.own>=0&&P[B.own]&&P[B.own].team!=g.t&&dist<12,ax=gx-sx*(ow?cl((12-dist)/6,0,1)*3.4:cl((18-dist)/9,0,1)*1.6),dz=cl(tz-g.z,-5.5*dt,5.5*dt);g.z+=dz;g.x+=cl(ax-g.x,-4.5*dt,4.5*dt);g.act=Math.abs(dz)>.01?1:0}}
  if(g.act<4&&g.kcd<=0){const s=Math.hypot(b.vx,b.vy,b.vz),cy=g.y+(g.act==2?.55:g.act==3?1.1:.95),reach=(g.act==2?1.3:g.act==3?1.45:.95)*(s>26?.8:1);
   if(Math.hypot(b.x-g.x,b.y-cy,b.z-g.z)<reach){M.kc++;
    if(s<13+g.skill*8&&b.y<2.4&&Math.abs(b.x)>L-9){b.vx=b.vy=b.vz=0;g.hold=1.1+Math.random()*.6;g.act=4;M.ks=7}
